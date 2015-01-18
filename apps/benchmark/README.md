@@ -27,7 +27,7 @@ DIRECTORY STRUCTURE
 REQUIREMENTS
 ------------
 
-The minimum requirement by Yii is that your Web server supports PHP 5.3.?.
+The minimum requirement by Yii is that your Web server supports PHP 5.4.0.
 
 
 INSTALLATION
@@ -43,7 +43,7 @@ curl -s http://getcomposer.org/installer | php
 You can then install the Bootstrap Application using the following command:
 
 ~~~
-php composer.phar create-project --stability=dev yiisoft/yii2-app-benchmark yii-benchmark
+php composer.phar create-project --prefer-dist --stability=dev yiisoft/yii2-app-benchmark yii-benchmark
 ~~~
 
 Now you should be able to access the benchmark page using the URL

@@ -3,93 +3,94 @@
 namespace app\controllers;
 
 use Yii;
-use yii\web\AccessControl;
+use yii\filters\AccessControl;
 use yii\web\Controller;
-use yii\web\VerbFilter;
+use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
 class SiteController extends Controller
 {
-	public function behaviors()
-	{
-		return array(
-			'access' => array(
-				'class' => AccessControl::className(),
-				'only' => array('login', 'logout'),
-				'rules' => array(
-					array(
-						'actions' => array('login'),
-						'allow' => true,
-						'roles' => array('?'),
-					),
-					array(
-						'actions' => array('logout'),
-						'allow' => true,
-						'roles' => array('@'),
-					),
-				),
-			),
-			'verbs' => array(
-				'class' => VerbFilter::className(),
-				'actions' => array(
-					'logout' => array('post'),
-				),
-			),
-		);
-	}
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::className(),
+                'only' => ['logout'],
+                'rules' => [
+                    [
+                        'actions' => ['logout'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::className(),
+                'actions' => [
+                    'logout' => ['post'],
+                ],
+            ],
+        ];
+    }
 
-	public function actions()
-	{
-		return array(
-			'error' => array(
-				'class' => 'yii\web\ErrorAction',
-			),
-			'captcha' => array(
-				'class' => 'yii\captcha\CaptchaAction',
-				'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-			),
-		);
-	}
+    public function actions()
+    {
+        return [
+            'error' => [
+                'class' => 'yii\web\ErrorAction',
+            ],
+            'captcha' => [
+                'class' => 'yii\captcha\CaptchaAction',
+                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+            ],
+        ];
+    }
 
-	public function actionIndex()
-	{
-		return $this->render('index');
-	}
+    public function actionIndex()
+    {
+        return $this->render('index');
+    }
 
-	public function actionLogin()
-	{
-		$model = new LoginForm();
-		if ($model->load($_POST) && $model->login()) {
-			return $this->goBack();
-		} else {
-			return $this->render('login', array(
-				'model' => $model,
-			));
-		}
-	}
+    public function actionLogin()
+    {
+        if (!\Yii::$app->user->isGuest) {
+            return $this->goHome();
+        }
 
-	public function actionLogout()
-	{
-		Yii::$app->user->logout();
-		return $this->goHome();
-	}
+        $model = new LoginForm();
+        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+            return $this->goBack();
+        } else {
+            return $this->render('login', [
+                'model' => $model,
+            ]);
+        }
+    }
 
-	public function actionContact()
-	{
-		$model = new ContactForm;
-		if ($model->load($_POST) && $model->contact(Yii::$app->params['adminEmail'])) {
-			Yii::$app->session->setFlash('contactFormSubmitted');
-			return $this->refresh();
-		} else {
-			return $this->render('contact', array(
-				'model' => $model,
-			));
-		}
-	}
+    public function actionLogout()
+    {
+        Yii::$app->user->logout();
 
-	public function actionAbout()
-	{
-		return $this->render('about');
-	}
+        return $this->goHome();
+    }
+
+    public function actionContact()
+    {
+        $model = new ContactForm();
+        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
+            Yii::$app->session->setFlash('contactFormSubmitted');
+
+            return $this->refresh();
+        } else {
+            return $this->render('contact', [
+                'model' => $model,
+            ]);
+        }
+    }
+
+    public function actionAbout()
+    {
+        return $this->render('about');
+    }
 }

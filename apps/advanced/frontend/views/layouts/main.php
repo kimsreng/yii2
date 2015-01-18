@@ -1,69 +1,76 @@
 <?php
-use frontend\config\AppAsset;
 use yii\helpers\Html;
 use yii\bootstrap\Nav;
 use yii\bootstrap\NavBar;
 use yii\widgets\Breadcrumbs;
+use frontend\assets\AppAsset;
 use frontend\widgets\Alert;
 
-/**
- * @var $this \yii\base\View
- * @var $content string
- */
+/* @var $this \yii\web\View */
+/* @var $content string */
+
 AppAsset::register($this);
 ?>
-<?php $this->beginPage(); ?>
+<?php $this->beginPage() ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= Yii::$app->language ?>">
 <head>
-	<meta charset="<?php echo Yii::$app->charset; ?>"/>
-	<title><?php echo Html::encode($this->title); ?></title>
-	<?php $this->head(); ?>
+    <meta charset="<?= Yii::$app->charset ?>"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <?= Html::csrfMetaTags() ?>
+    <title><?= Html::encode($this->title) ?></title>
+    <?php $this->head() ?>
 </head>
 <body>
-	<?php $this->beginBody(); ?>
-	<?php
-		NavBar::begin(array(
-			'brandLabel' => 'My Company',
-			'brandUrl' => Yii::$app->homeUrl,
-			'options' => array(
-				'class' => 'navbar-inverse navbar-fixed-top',
-			),
-		));
-		$menuItems = array(
-			array('label' => 'Home', 'url' => array('/site/index')),
-			array('label' => 'About', 'url' => array('/site/about')),
-			array('label' => 'Contact', 'url' => array('/site/contact')),
-		);
-		if (Yii::$app->user->isGuest) {
-			$menuItems[] = array('label' => 'Signup', 'url' => array('/site/signup'));
-			$menuItems[] = array('label' => 'Login', 'url' => array('/site/login'));
-		} else {
-			$menuItems[] = array('label' => 'Logout (' . Yii::$app->user->identity->username .')' , 'url' => array('/site/logout'));
-		}
-		echo Nav::widget(array(
-			'options' => array('class' => 'navbar-nav pull-right'),
-			'items' => $menuItems,
-		));
-		NavBar::end();
-	?>
+    <?php $this->beginBody() ?>
+    <div class="wrap">
+        <?php
+            NavBar::begin([
+                'brandLabel' => 'My Company',
+                'brandUrl' => Yii::$app->homeUrl,
+                'options' => [
+                    'class' => 'navbar-inverse navbar-fixed-top',
+                ],
+            ]);
+            $menuItems = [
+                ['label' => 'Home', 'url' => ['/site/index']],
+                ['label' => 'About', 'url' => ['/site/about']],
+                ['label' => 'Contact', 'url' => ['/site/contact']],
+            ];
+            if (Yii::$app->user->isGuest) {
+                $menuItems[] = ['label' => 'Signup', 'url' => ['/site/signup']];
+                $menuItems[] = ['label' => 'Login', 'url' => ['/site/login']];
+            } else {
+                $menuItems[] = [
+                    'label' => 'Logout (' . Yii::$app->user->identity->username . ')',
+                    'url' => ['/site/logout'],
+                    'linkOptions' => ['data-method' => 'post']
+                ];
+            }
+            echo Nav::widget([
+                'options' => ['class' => 'navbar-nav navbar-right'],
+                'items' => $menuItems,
+            ]);
+            NavBar::end();
+        ?>
 
-	<div class="container">
-	<?php echo Breadcrumbs::widget(array(
-		'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : array(),
-	)); ?>
-	<?php echo Alert::widget()?>
-	<?php echo $content; ?>
-	</div>
+        <div class="container">
+        <?= Breadcrumbs::widget([
+            'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
+        ]) ?>
+        <?= Alert::widget() ?>
+        <?= $content ?>
+        </div>
+    </div>
 
-	<footer class="footer">
-		<div class="container">
-		<p class="pull-left">&copy; My Company <?php echo date('Y'); ?></p>
-		<p class="pull-right"><?php echo Yii::powered(); ?></p>
-		</div>
-	</footer>
+    <footer class="footer">
+        <div class="container">
+        <p class="pull-left">&copy; My Company <?= date('Y') ?></p>
+        <p class="pull-right"><?= Yii::powered() ?></p>
+        </div>
+    </footer>
 
-	<?php $this->endBody(); ?>
+    <?php $this->endBody() ?>
 </body>
 </html>
-<?php $this->endPage(); ?>
+<?php $this->endPage() ?>

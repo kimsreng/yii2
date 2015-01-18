@@ -1,172 +1,171 @@
 <?php
-
 namespace frontend\controllers;
 
 use Yii;
-use yii\web\Controller;
 use common\models\LoginForm;
+use frontend\models\PasswordResetRequestForm;
+use frontend\models\ResetPasswordForm;
+use frontend\models\SignupForm;
 use frontend\models\ContactForm;
-use common\models\User;
-use yii\web\HttpException;
-use yii\helpers\Security;
+use yii\base\InvalidParamException;
+use yii\web\BadRequestHttpException;
+use yii\web\Controller;
+use yii\filters\VerbFilter;
+use yii\filters\AccessControl;
 
+/**
+ * Site controller
+ */
 class SiteController extends Controller
 {
-	public function behaviors()
-	{
-		return array(
-			'access' => array(
-				'class' => \yii\web\AccessControl::className(),
-				'only' => array('login', 'logout', 'signup'),
-				'rules' => array(
-					array(
-						'actions' => array('login', 'signup'),
-						'allow' => true,
-						'roles' => array('?'),
-					),
-					array(
-						'actions' => array('logout'),
-						'allow' => true,
-						'roles' => array('@'),
-					),
-				),
-			),
-		);
-	}
+    /**
+     * @inheritdoc
+     */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::className(),
+                'only' => ['logout', 'signup'],
+                'rules' => [
+                    [
+                        'actions' => ['signup'],
+                        'allow' => true,
+                        'roles' => ['?'],
+                    ],
+                    [
+                        'actions' => ['logout'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::className(),
+                'actions' => [
+                    'logout' => ['post'],
+                ],
+            ],
+        ];
+    }
 
-	public function actions()
-	{
-		return array(
-			'error' => array(
-				'class' => 'yii\web\ErrorAction',
-			),
-			'captcha' => array(
-				'class' => 'yii\captcha\CaptchaAction',
-				'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-			),
-		);
-	}
+    /**
+     * @inheritdoc
+     */
+    public function actions()
+    {
+        return [
+            'error' => [
+                'class' => 'yii\web\ErrorAction',
+            ],
+            'captcha' => [
+                'class' => 'yii\captcha\CaptchaAction',
+                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+            ],
+        ];
+    }
 
-	public function actionIndex()
-	{
-		return $this->render('index');
-	}
+    public function actionIndex()
+    {
+        return $this->render('index');
+    }
 
-	public function actionLogin()
-	{
-		$model = new LoginForm();
-		if ($model->load($_POST) && $model->login()) {
-			return $this->goHome();
-		} else {
-			return $this->render('login', array(
-				'model' => $model,
-			));
-		}
-	}
+    public function actionLogin()
+    {
+        if (!\Yii::$app->user->isGuest) {
+            return $this->goHome();
+        }
 
-	public function actionLogout()
-	{
-		Yii::$app->user->logout();
-		return $this->goHome();
-	}
+        $model = new LoginForm();
+        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+            return $this->goBack();
+        } else {
+            return $this->render('login', [
+                'model' => $model,
+            ]);
+        }
+    }
 
-	public function actionContact()
-	{
-		$model = new ContactForm;
-		if ($model->load($_POST) && $model->contact(Yii::$app->params['adminEmail'])) {
-			Yii::$app->session->setFlash('success', 'Thank you for contacting us. We will respond to you as soon as possible.');
-			return $this->refresh();
-		} else {
-			return $this->render('contact', array(
-				'model' => $model,
-			));
-		}
-	}
+    public function actionLogout()
+    {
+        Yii::$app->user->logout();
 
-	public function actionAbout()
-	{
-		return $this->render('about');
-	}
+        return $this->goHome();
+    }
 
-	public function actionSignup()
-	{
-		$model = new User();
-		$model->setScenario('signup');
-		if ($model->load($_POST) && $model->save()) {
-			if (Yii::$app->getUser()->login($model)) {
-				return $this->goHome();
-			}
-		}
+    public function actionContact()
+    {
+        $model = new ContactForm();
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            if ($model->sendEmail(Yii::$app->params['adminEmail'])) {
+                Yii::$app->session->setFlash('success', 'Thank you for contacting us. We will respond to you as soon as possible.');
+            } else {
+                Yii::$app->session->setFlash('error', 'There was an error sending email.');
+            }
 
-		return $this->render('signup', array(
-			'model' => $model,
-		));
-	}
+            return $this->refresh();
+        } else {
+            return $this->render('contact', [
+                'model' => $model,
+            ]);
+        }
+    }
 
-	public function actionRequestPasswordReset()
-	{
-		$model = new User();
-		$model->scenario = 'requestPasswordResetToken';
-		if ($model->load($_POST) && $model->validate()) {
-			if ($this->sendPasswordResetEmail($model->email)) {
-				Yii::$app->getSession()->setFlash('success', 'Check your email for further instructions.');
-				return $this->goHome();
-			} else {
-				Yii::$app->getSession()->setFlash('error', 'There was an error sending email.');
-			}
-		}
-		return $this->render('requestPasswordResetToken', array(
-			'model' => $model,
-		));
-	}
+    public function actionAbout()
+    {
+        return $this->render('about');
+    }
 
-	public function actionResetPassword($token)
-	{
-		$model = User::find(array(
-			'password_reset_token' => $token,
-			'status' => User::STATUS_ACTIVE,
-		));
+    public function actionSignup()
+    {
+        $model = new SignupForm();
+        if ($model->load(Yii::$app->request->post())) {
+            if ($user = $model->signup()) {
+                if (Yii::$app->getUser()->login($user)) {
+                    return $this->goHome();
+                }
+            }
+        }
 
-		if (!$model) {
-			throw new HttpException(400, 'Wrong password reset token.');
-		}
+        return $this->render('signup', [
+            'model' => $model,
+        ]);
+    }
 
-		$model->scenario = 'resetPassword';
-		if ($model->load($_POST) && $model->save()) {
-			Yii::$app->getSession()->setFlash('success', 'New password was saved.');
-			return $this->goHome();
-		}
+    public function actionRequestPasswordReset()
+    {
+        $model = new PasswordResetRequestForm();
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            if ($model->sendEmail()) {
+                Yii::$app->getSession()->setFlash('success', 'Check your email for further instructions.');
 
-		return $this->render('resetPassword', array(
-			'model' => $model,
-		));
-	}
+                return $this->goHome();
+            } else {
+                Yii::$app->getSession()->setFlash('error', 'Sorry, we are unable to reset password for email provided.');
+            }
+        }
 
-	private function sendPasswordResetEmail($email)
-	{
-		$user = User::find(array(
-			'status' => User::STATUS_ACTIVE,
-			'email' => $email,
-		));
+        return $this->render('requestPasswordResetToken', [
+            'model' => $model,
+        ]);
+    }
 
-		if (!$user) {
-			return false;
-		}
+    public function actionResetPassword($token)
+    {
+        try {
+            $model = new ResetPasswordForm($token);
+        } catch (InvalidParamException $e) {
+            throw new BadRequestHttpException($e->getMessage());
+        }
 
-		$user->password_reset_token = Security::generateRandomKey();
-		if ($user->save(false)) {
-			$fromEmail = \Yii::$app->params['supportEmail'];
-			$name = '=?UTF-8?B?' . base64_encode(\Yii::$app->name . ' robot') . '?=';
-			$subject = '=?UTF-8?B?' . base64_encode('Password reset for ' . \Yii::$app->name) . '?=';
-			$body = $this->renderPartial('/emails/passwordResetToken', array(
-				'user' => $user,
-			));
-			$headers = "From: $name <{$fromEmail}>\r\n" .
-				"MIME-Version: 1.0\r\n" .
-				"Content-type: text/plain; charset=UTF-8";
-			return mail($email, $subject, $body, $headers);
-		}
+        if ($model->load(Yii::$app->request->post()) && $model->validate() && $model->resetPassword()) {
+            Yii::$app->getSession()->setFlash('success', 'New password was saved.');
 
-		return false;
-	}
+            return $this->goHome();
+        }
+
+        return $this->render('resetPassword', [
+            'model' => $model,
+        ]);
+    }
 }
